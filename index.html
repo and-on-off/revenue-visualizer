@@ -59,6 +59,23 @@
         }
 
         function displayData(stores) {
+            // Sort the stores array based on the selected criteria
+            const sortBy = document.getElementById('sortBy').value;
+            const sortOrder = document.getElementById('sortOrder').value;
+
+            stores.sort((a, b) => {
+                let comparison = 0;
+                if (sortBy === 'name') {
+                    const nameA = parseInt(a.name.substring(6)); // Extract the number
+                    const nameB = parseInt(b.name.substring(6));
+                    comparison = nameA - nameB;
+                } else if (sortBy === 'revenue') {
+                    comparison = a.revenue - b.revenue;
+                }
+
+                return sortOrder === 'desc' ? comparison * -1 : comparison;
+            });
+
             let html = '<table id="storeList"><thead><tr><th>Name</th><th>Revenue</th></tr></thead><tbody>';
             stores.forEach(store => {
                 html += `<tr><td>${store.name}</td><td>$${store.revenue.toLocaleString()}</td></tr>`;
