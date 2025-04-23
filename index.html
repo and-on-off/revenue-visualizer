@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <title>Store Revenue List</title>
     <style>
         body { font-family: sans-serif; }
@@ -13,189 +14,195 @@
     </style>
 </head>
 <body>
-    <h1>Store Revenues (100 Stores)</h1>
-
-    <div id="controls">
-        <label for="searchInput">Search Store:</label>
-        <input type="text" id="searchInput" onkeyup="updateData()">
-
-        <label for="minRevenue">Min Revenue:</label>
-        <input type="number" id="minRevenue" onkeyup="updateData()">
-
-        <label for="maxRevenue">Max Revenue:</label>
-        <input type="number" id="maxRevenue" onkeyup="updateData()">
-
-        <label for="sortBy">Sort By:</label>
-        <select id="sortBy" onchange="updateData()">
-            <option value="name">Name</option>
-            <option value="revenue">Revenue</option>
-        </select>
-
-        <label for="sortOrder">Order:</label>
-        <select id="sortOrder" onchange="updateData()">
-            <option value="asc">Ascending</option>
-            <option value="desc">Descending</option>
-        </select>
-
-        <button onclick="displayChart()">Show Revenue Chart</button>
-    </div>
-
-    <div id="dataDisplay">
-    </div>
-
-    <canvas id="revenueChart" style="width:80%;margin:auto;display:none;"></canvas>
-
-    <script>
-        const dataDisplay = document.getElementById('dataDisplay');
-        const searchInput = document.getElementById('searchInput');
-        const minRevenueInput = document.getElementById('minRevenue');
-        const maxRevenueInput = document.getElementById('maxRevenue');
-        const sortBySelect = document.getElementById('sortBy');
-        const sortOrderSelect = document.getElementById('sortOrder');
-        const revenueChartCanvas = document.getElementById('revenueChart');
-        let currentChart; // To store the chart instance
-        window.currentStores = []; // Initialize as an empty array
-
-        async function fetchAndDisplayData() {
-            const searchTerm = searchInput.value.toLowerCase();
-            const sortBy = sortBySelect.value;
-            const sortOrder = sortOrderSelect.value;
-            const minRevenue = minRevenueInput.value;
-            const maxRevenue = maxRevenueInput.value;
-
-            let url = `https://andonoff.pythonanywhere.com/api/revenue?search=${searchTerm}&sort_by=${sortBy}&sort_order=${sortOrder}`;
-
-            if (minRevenue !== '') {
-                url += `&min_revenue=${minRevenue}`;
-            }
-            if (maxRevenue !== '') {
-                url += `&max_revenue=${maxRevenue}`;
-            }
-
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                displayData(data);
-            } catch (error) {
-                console.error('Error fetching data:', error);
-                dataDisplay.innerHTML = '<p>Error loading data.</p>';
-            }
-        }
-
-        function displayData(stores) {
-            // Sort the stores array based on the selected criteria
-            const sortBy = document.getElementById('sortBy').value;
-            const sortOrder = document.getElementById('sortOrder').value;
-
-            stores.sort((a, b) => {
-                let comparison = 0;
-                if (sortBy === 'name') {
-                    const nameA = parseInt(a.name.substring(6)); // Extract the number
-                    const nameB = parseInt(b.name.substring(6));
-                    comparison = nameA - nameB;
-                } else if (sortBy === 'revenue') {
-                    comparison = a.revenue - b.revenue;
+    <body>
+        <h1>Store Revenues (100 Stores)</h1>
+    
+        <div id="controls">
+            <label for="searchInput">Search Store:</label>
+            <input type="text" id="searchInput" onkeyup="updateData()">
+    
+            <label for="minRevenue">Min Revenue:</label>
+            <input type="number" id="minRevenue" onkeyup="updateData()">
+    
+            <label for="maxRevenue">Max Revenue:</label>
+            <input type="number" id="maxRevenue" onkeyup="updateData()">
+    
+            <label for="sortBy">Sort By:</label>
+            <select id="sortBy" onchange="updateData()">
+                <option value="name">Name</option>
+                <option value="revenue">Revenue</option>
+            </select>
+    
+            <label for="sortOrder">Order:</label>
+            <select id="sortOrder" onchange="updateData()">
+                <option value="asc">Ascending</option>
+                <option value="desc">Descending</option>
+            </select>
+    
+            <button onclick="displayChart()">Show Revenue Chart</button>
+        </div>
+    
+        <div id="dataDisplay">
+        </div>
+    
+        <div style="width: 100%; overflow-x: auto; height: 1000px;">
+            <canvas id="revenueChart" style="width: auto; height: 1000px; margin:auto; display:none;"></canvas>
+        </div>
+    
+        <script>
+            const dataDisplay = document.getElementById('dataDisplay');
+            const searchInput = document.getElementById('searchInput');
+            const minRevenueInput = document.getElementById('minRevenue');
+            const maxRevenueInput = document.getElementById('maxRevenue');
+            const sortBySelect = document.getElementById('sortBy');
+            const sortOrderSelect = document.getElementById('sortOrder');
+            const revenueChartCanvas = document.getElementById('revenueChart');
+            let currentChart; // To store the chart instance
+            window.currentStores = []; // Initialize as an empty array
+    
+            async function fetchAndDisplayData() {
+                const searchTerm = searchInput.value.toLowerCase();
+                const sortBy = sortBySelect.value;
+                const sortOrder = sortOrderSelect.value;
+                const minRevenue = minRevenueInput.value;
+                const maxRevenue = maxRevenueInput.value;
+    
+                let url = `https://andonoff.pythonanywhere.com/api/revenue?search=${searchTerm}&sort_by=${sortBy}&sort_order=${sortOrder}`;
+    
+                if (minRevenue !== '') {
+                    url += `&min_revenue=${minRevenue}`;
                 }
-
-                return sortOrder === 'desc' ? comparison * -1 : comparison;
-            });
-
-            window.currentStores = stores; // Make the current filtered/sorted stores accessible globally for the chart
-            let html = '<table id="storeList"><thead><tr><th>Name</th><th>Revenue</th></tr></thead><tbody>';
-            stores.forEach(store => {
-                html += `<tr><td>${store.name}</td><td>$${store.revenue.toLocaleString()}</td></tr>`;
-            });
-            html += '</tbody></table>';
-            dataDisplay.innerHTML = html;
-            // Optionally hide the chart when the table is updated
-            revenueChartCanvas.style.display = 'none';
-            if (currentChart) {
-                currentChart.destroy();
-                currentChart = null;
+                if (maxRevenue !== '') {
+                    url += `&max_revenue=${maxRevenue}`;
+                }
+    
+                try {
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    displayData(data);
+                } catch (error) {
+                    console.error('Error fetching data:', error);
+                    dataDisplay.innerHTML = '<p>Error loading data.</p>';
+                }
             }
-        }
-
-        function updateData() {
-            fetchAndDisplayData();
-        }
-
-        function displayChart() {
-            if (window.currentStores && window.currentStores.length > 0) {
-                const storeNames = window.currentStores.map(store => store.name);
-                const revenues = window.currentStores.map(store => store.revenue);
-                const numStores = storeNames.length;
-
-                // Dynamically adjust canvas width (you might need to tweak this multiplier)
-                revenueChartCanvas.width = Math.max(800, numStores * 20); // Minimum width of 800px, adjust '20' based on bar width
-
-                revenueChartCanvas.style.display = 'block';
-
+    
+            function displayData(stores) {
+                // Sort the stores array based on the selected criteria
+                const sortBy = document.getElementById('sortBy').value;
+                const sortOrder = document.getElementById('sortOrder').value;
+    
+                stores.sort((a, b) => {
+                    let comparison = 0;
+                    if (sortBy === 'name') {
+                        const nameA = parseInt(a.name.substring(6)); // Extract the number
+                        const nameB = parseInt(b.name.substring(6));
+                        comparison = nameA - nameB;
+                    } else if (sortBy === 'revenue') {
+                        comparison = a.revenue - b.revenue;
+                    }
+    
+                    return sortOrder === 'desc' ? comparison * -1 : comparison;
+                });
+    
+                window.currentStores = stores; // Make the current filtered/sorted stores accessible globally for the chart
+                let html = '<table id="storeList"><thead><tr><th>Name</th><th>Revenue</th></tr></thead><tbody>';
+                stores.forEach(store => {
+                    html += `<tr><td>${store.name}</td><td>$${store.revenue.toLocaleString()}</td></tr>`;
+                });
+                html += '</tbody></table>';
+                dataDisplay.innerHTML = html;
+                // Optionally hide the chart when the table is updated
+                revenueChartCanvas.style.display = 'none';
                 if (currentChart) {
                     currentChart.destroy();
+                    currentChart = null;
                 }
-
-                currentChart = new Chart(revenueChartCanvas, {
-                    type: 'bar',
-                    data: {
-                        labels: storeNames,
-                        datasets: [{
-                            label: 'Store Revenue',
-                            data: revenues,
-                            backgroundColor: 'rgba(75, 192, 192, 0.7)',
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        indexAxis: 'x', // Ensure bars are horizontal for better readability with many labels
-                        scales: {
-                            x: {
-                                autoSkip: false,
-                                ticks: {
-                                    maxRotation: 90,
-                                    minRotation: 45
+            }
+    
+            function updateData() {
+                fetchAndDisplayData();
+            }
+    
+            function displayChart() {
+                if (window.currentStores && window.currentStores.length > 0) {
+                    const storeNames = window.currentStores.map(store => store.name);
+                    const revenues = window.currentStores.map(store => store.revenue);
+                    const numStores = storeNames.length;
+    
+                     // Limit the number of bars displayed
+                    const maxBars = 100;
+                    const limitedStoreNames = storeNames.slice(0, maxBars);
+                    const limitedRevenues = revenues.slice(0, maxBars);
+    
+                    // Dynamically adjust canvas width (you might need to tweak this multiplier)
+                    // revenueChartCanvas.width = Math.max(800, numStores * 20); // Minimum width of 800px, adjust '20' based on bar width
+    
+                    revenueChartCanvas.style.display = 'block';
+    
+                    if (currentChart) {
+                        currentChart.destroy();
+                    }
+    
+                    currentChart = new Chart(revenueChartCanvas, {
+                        type: 'bar',
+                        data: {
+                            labels: limitedStoreNames, // Use the limited arrays
+                            datasets: [{
+                                label: 'Store Revenue',
+                                data: limitedRevenues, // Use the limited arrays
+                                backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            indexAxis: 'y', // Ensure bars are horizontal for better readability with many labels
+                            scales: {
+                                y: {
+                                    autoSkip: false,
+                                    // maxRotation: 90,
+                                    // minRotation: 45,
+                                    title: {
+                                        display: true,
+                                        text: 'Store Name'
+                                    }
                                 },
-                                title: {
-                                    display: true,
-                                    text: 'Store Name'
-                                }
-                            },
-                            y: {
-                                beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: 'Revenue'
-                                },
-                                ticks: {
-                                    callback: function(value, index, values) {
-                                        return '$' + value.toLocaleString();
+                                x: {
+                                    beginAtZero: true,
+                                    title: {
+                                        display: true,
+                                        text: 'Revenue'
+                                    },
+                                    ticks: {
+                                        callback: function(value, index, values) {
+                                            return '$' + value.toLocaleString();
+                                        }
                                     }
                                 }
-                            }
-                        },
-                        plugins: {
-                            legend: {
-                                display: false // Hide the label of the dataset
                             },
-                            title: {
-                                display: true,
-                                text: 'Store Revenues',
-                                font: {
-                                    size: 16
+                            plugins: {
+                                legend: {
+                                    display: false // Hide the label of the dataset
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Store Revenues',
+                                    font: {
+                                        size: 16
+                                    }
                                 }
-                            }
-                        },
-                        responsive: true,
-                        maintainAspectRatio: false // Allow the chart to scale based on the canvas width
-                    }
-                });
-            } else {
-                alert('No store data to display chart.');
+                            },
+                            responsive: true,
+                            maintainAspectRatio: false // Allow the chart to scale based on the canvas width
+                        }
+                    });
+                } else {
+                    alert('No store data to display chart.');
+                }
             }
-        }
-
-        // Initial data load
-        fetchAndDisplayData();
-    </script>
-</body>
+    
+            // Initial data load
+            fetchAndDisplayData();
+        </script>
+    </body>
 </html>
