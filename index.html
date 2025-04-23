@@ -19,6 +19,12 @@
         <label for="searchInput">Search Store:</label>
         <input type="text" id="searchInput" onkeyup="updateData()">
 
+        <label for="minRevenue">Min Revenue:</label>
+        <input type="number" id="minRevenue" onkeyup="updateData()">
+
+        <label for="maxRevenue">Max Revenue:</label>
+        <input type="number" id="maxRevenue" onkeyup="updateData()">
+
         <label for="sortBy">Sort By:</label>
         <select id="sortBy" onchange="updateData()">
             <option value="name">Name</option>
@@ -38,6 +44,8 @@
     <script>
         const dataDisplay = document.getElementById('dataDisplay');
         const searchInput = document.getElementById('searchInput');
+        const minRevenueInput = document.getElementById('minRevenue');
+        const maxRevenueInput = document.getElementById('maxRevenue');
         const sortBySelect = document.getElementById('sortBy');
         const sortOrderSelect = document.getElementById('sortOrder');
 
@@ -45,8 +53,17 @@
             const searchTerm = searchInput.value.toLowerCase();
             const sortBy = sortBySelect.value;
             const sortOrder = sortOrderSelect.value;
+            const minRevenue = minRevenueInput.value;
+            const maxRevenue = maxRevenueInput.value;
 
-            const url = `https://andonoff.pythonanywhere.com/api/revenue?search=${searchTerm}&sort_by=${sortBy}&sort_order=${sortOrder}`;
+            let url = `https://andonoff.pythonanywhere.com/api/revenue?search=${searchTerm}&sort_by=${sortBy}&sort_order=${sortOrder}`;
+            
+            if (minRevenue !== '') {
+                url += `&min_revenue=${minRevenue}`;
+            }
+            if (maxRevenue !== '') {
+                url += `&max_revenue=${maxRevenue}`;
+            }
 
             try {
                 const response = await fetch(url);

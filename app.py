@@ -24,10 +24,27 @@ def get_revenue_data():
     search_term = request.args.get('search', '').lower()
     sort_by = request.args.get('sort_by', 'name')
     sort_order = request.args.get('sort_order', 'asc')
+    min_revenue = request.args.get('min_revenue')
+    max_revenue = request.args.get('max_revenue')
 
     filtered_stores = store_data
+
     if search_term:
         filtered_stores = [store for store in filtered_stores if search_term in store['name'].lower()]
+
+    if min_revenue:
+        try:
+            min_rev = int(min_revenue)
+            filtered_stores = [store for store in filtered_stores if store['revenue'] >= min_rev]
+        except ValueError:
+            pass # Ignore invalid input
+
+    if max_revenue:
+        try:
+            max_rev = int(max_revenue)
+            filtered_stores = [store for store in filtered_stores if store['revenue'] <= max_rev]
+        except ValueError:
+            pass # Ignore invalid input
 
     if sort_by == 'revenue':
         filtered_stores.sort(key=lambda x: x['revenue'], reverse=(sort_order == 'desc'))
