@@ -36,10 +36,14 @@
             <option value="asc">Ascending</option>
             <option value="desc">Descending</option>
         </select>
+
+        <button onclick="displayChart()">Show Revenue Chart</button>
     </div>
 
     <div id="dataDisplay">
-        </div>
+    </div>
+
+    <canvas id="revenueChart" style="width:80%;margin:auto;display:none;"></canvas>
 
     <script>
         const dataDisplay = document.getElementById('dataDisplay');
@@ -48,6 +52,9 @@
         const maxRevenueInput = document.getElementById('maxRevenue');
         const sortBySelect = document.getElementById('sortBy');
         const sortOrderSelect = document.getElementById('sortOrder');
+        const revenueChartCanvas = document.getElementById('revenueChart');
+        let currentChart; // To store the chart instance
+        window.currentStores = []; // Initialize as an empty array
 
         async function fetchAndDisplayData() {
             const searchTerm = searchInput.value.toLowerCase();
@@ -57,7 +64,7 @@
             const maxRevenue = maxRevenueInput.value;
 
             let url = `https://andonoff.pythonanywhere.com/api/revenue?search=${searchTerm}&sort_by=${sortBy}&sort_order=${sortOrder}`;
-            
+
             if (minRevenue !== '') {
                 url += `&min_revenue=${minRevenue}`;
             }
@@ -93,16 +100,98 @@
                 return sortOrder === 'desc' ? comparison * -1 : comparison;
             });
 
+            window.currentStores = stores; // Make the current filtered/sorted stores accessible globally for the chart
             let html = '<table id="storeList"><thead><tr><th>Name</th><th>Revenue</th></tr></thead><tbody>';
             stores.forEach(store => {
                 html += `<tr><td>${store.name}</td><td>$${store.revenue.toLocaleString()}</td></tr>`;
             });
             html += '</tbody></table>';
             dataDisplay.innerHTML = html;
+            // Optionally hide the chart when the table is updated
+            revenueChartCanvas.style.display = 'none';
+            if (currentChart) {
+                currentChart.destroy();
+                currentChart = null;
+            }
         }
 
         function updateData() {
             fetchAndDisplayData();
+        }
+
+        function displayChart() {
+            if (window.currentStores && window.currentStores.length > 0) {
+                const storeNames = window.currentStores.map(store => store.name);
+                const revenues = window.currentStores.map(store => store.revenue);
+                const numStores = storeNames.length;
+
+                // Dynamically adjust canvas width (you might need to tweak this multiplier)
+                revenueChartCanvas.width = Math.max(800, numStores * 20); // Minimum width of 800px, adjust '20' based on bar width
+
+                revenueChartCanvas.style.display = 'block';
+
+                if (currentChart) {
+                    currentChart.destroy();
+                }
+
+                currentChart = new Chart(revenueChartCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: storeNames,
+                        datasets: [{
+                            label: 'Store Revenue',
+                            data: revenues,
+                            backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'x', // Ensure bars are horizontal for better readability with many labels
+                        scales: {
+                            x: {
+                                autoSkip: false,
+                                ticks: {
+                                    maxRotation: 90,
+                                    minRotation: 45
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Store Name'
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Revenue'
+                                },
+                                ticks: {
+                                    callback: function(value, index, values) {
+                                        return '$' + value.toLocaleString();
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false // Hide the label of the dataset
+                            },
+                            title: {
+                                display: true,
+                                text: 'Store Revenues',
+                                font: {
+                                    size: 16
+                                }
+                            }
+                        },
+                        responsive: true,
+                        maintainAspectRatio: false // Allow the chart to scale based on the canvas width
+                    }
+                });
+            } else {
+                alert('No store data to display chart.');
+            }
         }
 
         // Initial data load
