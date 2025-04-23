@@ -3,65 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Store Revenue Chart</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Store Revenue List</title>
     <style>
-        #myChart {
-            width: 80%;
-            margin: auto;
-        }
-        h1 {
-            text-align: center;
-        }
+        body { font-family: sans-serif; }
+        #controls { margin-bottom: 10px; }
+        #storeList { border-collapse: collapse; width: 80%; margin: auto; }
+        #storeList th, #storeList td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        #storeList th { background-color: #f2f2f2; }
     </style>
 </head>
 <body>
-    <h1>Store Revenue Over 4 Months</h1>
-    <canvas id="myChart"></canvas>
+    <h1>Store Revenues (100 Stores)</h1>
+
+    <div id="controls">
+        <label for="searchInput">Search Store:</label>
+        <input type="text" id="searchInput" onkeyup="updateData()">
+
+        <label for="sortBy">Sort By:</label>
+        <select id="sortBy" onchange="updateData()">
+            <option value="name">Name</option>
+            <option value="revenue">Revenue</option>
+        </select>
+
+        <label for="sortOrder">Order:</label>
+        <select id="sortOrder" onchange="updateData()">
+            <option value="asc">Ascending</option>
+            <option value="desc">Descending</option>
+        </select>
+    </div>
+
+    <div id="dataDisplay">
+        </div>
+
     <script>
-        async function fetchDataAndCreateChart() {
+        const dataDisplay = document.getElementById('dataDisplay');
+        const searchInput = document.getElementById('searchInput');
+        const sortBySelect = document.getElementById('sortBy');
+        const sortOrderSelect = document.getElementById('sortOrder');
+
+        async function fetchAndDisplayData() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const sortBy = sortBySelect.value;
+            const sortOrder = sortOrderSelect.value;
+
+            const url = `https://andonoff.pythonanywhere.com/api/revenue?search=${searchTerm}&sort_by=${sortBy}&sort_order=${sortOrder}`;
+
             try {
-                const response = await fetch('https://andonoff.pythonanywhere.com/api/revenue'); // Fetch data from the Flask backend
-                const data = await response.json(); // Parse the JSON response
-    
-                const chartConfig = {
-                    type: 'bar',
-                    data: data, // Use the fetched data here
-                    options: {
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: {
-                                    callback: function(value, index, values) {
-                                        return '$' + value.toLocaleString();
-                                    }
-                                }
-                            }
-                        },
-                        plugins: {
-                            title: {
-                                display: true,
-                                text: 'Monthly Revenue by Store',
-                                font: {
-                                    size: 16
-                                }
-                            }
-                        }
-                    }
-                };
-    
-                const myChart = new Chart(
-                    document.getElementById('myChart'),
-                    chartConfig
-                );
-    
+                const response = await fetch(url);
+                const data = await response.json();
+                displayData(data);
             } catch (error) {
                 console.error('Error fetching data:', error);
-                // Optionally display an error message on the page
+                dataDisplay.innerHTML = '<p>Error loading data.</p>';
             }
         }
-    
-        fetchDataAndCreateChart(); // Call the function to fetch data and create the chart when the page loads
+
+        function displayData(stores) {
+            let html = '<table id="storeList"><thead><tr><th>Name</th><th>Revenue</th></tr></thead><tbody>';
+            stores.forEach(store => {
+                html += `<tr><td>${store.name}</td><td>$${store.revenue.toLocaleString()}</td></tr>`;
+            });
+            html += '</tbody></table>';
+            dataDisplay.innerHTML = html;
+        }
+
+        function updateData() {
+            fetchAndDisplayData();
+        }
+
+        // Initial data load
+        fetchAndDisplayData();
     </script>
 </body>
 </html>
